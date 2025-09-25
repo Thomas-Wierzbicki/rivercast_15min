@@ -145,7 +145,74 @@ Dann publisht das Serving in Topics wie:
 
 ---
 
-## ⚠️ Hinweis
+
+# Rivercast mit Mode Switch
+
+Dieses Projekt erlaubt Umschalten zwischen **globalem** und **per-Station** Training.
+
+In `config/config.yaml`:
+
+```yaml
+training_mode: 'global'       # eine Modellfamilie für alle Stationen
+# training_mode: 'per_station'  # separat je Station
+```
+
+- **global**: je Horizont ein Modellset unter `artifacts/{H}/...`
+- **per_station**: je Station und Horizont eigenes Modellset unter `artifacts/{station}/{H}/...`
+
+Die Serving-Logik lädt automatisch die passenden Modelle.
+
+
+
+📊 Hindcast & Visualisierung
+Hindcast erzeugen## 
+
+python -m src.eval.hindcast --horizons 24 48 96 --out data/processed/hindcast
+
+Einzelfall-Fan-Chart
+
+python -m src.plots.plot_fanchart --station ERFT_001 --horizon 48 \
+    --hindcast data/processed/hindcast --out artifacts/plots
+
+Batch-Rendering aller Fan-Charts
+
+python -m src.plots.batch_render --hindcast data/processed/hindcast --out artifacts/plots
+
+
+📈 Rollende Skill-Metriken
+
+python -m src.eval.rolling_metrics --hindcast data/processed/hindcast --window 96 \
+    --out data/processed/metrics --plot-out artifacts/metrics_plots
+
+window=96 → 24 h bei 15-min Raster
+
+Outputs: CSV/Parquet + optional PNGs
+
+Live-Dashboards
+Node-RED
+
+MQTT-Empfang mit Chart + Gauge
+
+REST-Endpoint /rivercast/forecast (via Node-RED Flow) gibt forecast_latest.json im Grafana-kompatiblen JSON-Format zurück.
+
+Grafana (ohne DB)
+
+JSON API Plugin installieren
+
+Datasource URL auf Node-RED Endpoint setzen, z. B.:
+
+
+http://localhost:1880/rivercast/forecast?station=ERFT_001&horizon=720&target=h_cm&quantiles=p10,p50,p90
+
+
+Timeseries-Panel erstellen → Grafana zeigt automatisch p10/p50/p90 an.
+
+Optional: weitere Panels für Hindcast- oder Metrik-Dateien (via CSV-Datasource oder zusätzlichen REST-Endpoints).
+
+
+
+
+⚠️ Hinweis
 
 Dies ist ein **Demoprojekt** mit synthetischen Daten.  
 Für reale hydrologische Anwendungen sind zusätzliche Qualitätskontrollen, Modellvalidierungen und eine enge Abstimmung mit Fachinstitutionen erforderlich.

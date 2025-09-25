@@ -1,0 +1,105 @@
+[
+  {
+    "id": "http_in",
+    "type": "http in",
+    "z": "rivercast_rest",
+    "name": "GET /rivercast/forecast",
+    "url": "/rivercast/forecast",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 170,
+    "y": 120,
+    "wires": [
+      [
+        "build_req"
+      ]
+    ]
+  },
+  {
+    "id": "build_req",
+    "type": "function",
+    "z": "rivercast_rest",
+    "name": "Build request (path + filters)",
+    "func": "\n// Default file path (adjust if Node-RED runs elsewhere)\nvar path = msg.req?.query?.path || \"artifacts/forecast_latest.json\";\nmsg.filename = path;\n\n// Attach filters from querystring\n// ?station=ERFT_001&horizon=720&target=h_cm&quantiles=p10,p50,p90\nmsg.filters = {\n  station: msg.req?.query?.station || null,\n  horizon_minutes: msg.req?.query?.horizon ? Number(msg.req.query.horizon) : null,\n  target: msg.req?.query?.target || null,\n  quantiles: (msg.req?.query?.quantiles || \"p10,p50,p90\").split(\",\")\n};\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 440,
+    "y": 120,
+    "wires": [
+      [
+        "file_in"
+      ]
+    ]
+  },
+  {
+    "id": "file_in",
+    "type": "file in",
+    "z": "rivercast_rest",
+    "name": "Read forecast_latest.json",
+    "filename": "",
+    "format": "utf8",
+    "chunk": false,
+    "sendError": true,
+    "encoding": "none",
+    "allProps": false,
+    "x": 760,
+    "y": 120,
+    "wires": [
+      [
+        "parse_json"
+      ]
+    ]
+  },
+  {
+    "id": "parse_json",
+    "type": "json",
+    "z": "rivercast_rest",
+    "name": "JSON parse",
+    "property": "payload",
+    "action": "",
+    "pretty": false,
+    "x": 1010,
+    "y": 120,
+    "wires": [
+      [
+        "to_grafana"
+      ]
+    ]
+  },
+  {
+    "id": "to_grafana",
+    "type": "function",
+    "z": "rivercast_rest",
+    "name": "To Grafana timeseries",
+    "func": "\n// Input payload: array of objects with fields:\n// ts (ISO), station_id, target, horizon_minutes, p10,p50,p90\n// Output: array [{target, datapoints: [[val, epoch_ms], ...]}]\n\nfunction toEpochMs(iso) {\n  const t = new Date(iso);\n  return t.getTime();\n}\n\nconst filters = msg.filters || {};\nconst validQ = new Set(filters.quantiles || [\"p10\",\"p50\",\"p90\"]);\nconst data = Array.isArray(msg.payload) ? msg.payload : [];\n\nlet seriesMap = {}; // key: targetName -> array of [val, ts]\n\nfor (const row of data) {\n  if (!row || !row.ts) continue;\n  if (filters.station && row.station_id !== filters.station) continue;\n  if (filters.target && row.target !== filters.target) continue;\n  if (filters.horizon_minutes && Number(row.horizon_minutes) !== Number(filters.horizon_minutes)) continue;\n\n  const station = row.station_id || \"?\";\n  const target = row.target || \"h_cm\";\n  const hz = row.horizon_minutes || 0;\n  const ts = toEpochMs(row.ts);\n\n  for (const q of [\"p10\",\"p50\",\"p90\"]) {\n    if (!validQ.has(q)) continue;\n    const key = `${station}_${hz}min_${target}_${q}`;\n    const val = Number(row[q]);\n    if (!seriesMap[key]) seriesMap[key] = [];\n    // Grafana expects [value, epoch_ms]\n    seriesMap[key].push([val, ts]);\n  }\n}\n\n// Build response array\nconst out = Object.keys(seriesMap).map(k => ({\n  target: k,\n  datapoints: seriesMap[k]\n}));\n\nmsg.payload = out;\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1260,
+    "y": 120,
+    "wires": [
+      [
+        "http_resp"
+      ]
+    ]
+  },
+  {
+    "id": "http_resp",
+    "type": "http response",
+    "z": "rivercast_rest",
+    "name": "HTTP 200",
+    "statusCode": "",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "x": 1500,
+    "y": 120,
+    "wires": []
+  }
+]
