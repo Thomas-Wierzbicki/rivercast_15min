@@ -1,0 +1,165 @@
+[
+  {
+    "id": "rivercast_tab",
+    "type": "ui_tab",
+    "name": "Rivercast",
+    "icon": "dashboard",
+    "order": 1,
+    "disabled": false,
+    "hidden": false
+  },
+  {
+    "id": "rivercast_group",
+    "type": "ui_group",
+    "z": "",
+    "name": "Forecasts",
+    "tab": "rivercast_tab",
+    "order": 1,
+    "disp": true,
+    "width": "12",
+    "collapse": false
+  },
+  {
+    "id": "broker1",
+    "type": "mqtt-broker",
+    "name": "Local MQTT",
+    "broker": "localhost",
+    "port": "1883",
+    "clientid": "",
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willPayload": "",
+    "willMsg": {}
+  },
+  {
+    "id": "mqtt_in",
+    "type": "mqtt in",
+    "z": "rivercast_flow",
+    "name": "Rivercast Forecasts",
+    "topic": "/rivercast/+/forecast/+/+",
+    "qos": "1",
+    "datatype": "auto",
+    "broker": "broker1",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "x": 160,
+    "y": 120,
+    "wires": [
+      [
+        "json_parse"
+      ]
+    ]
+  },
+  {
+    "id": "json_parse",
+    "type": "json",
+    "z": "rivercast_flow",
+    "name": "JSON parse",
+    "property": "payload",
+    "action": "",
+    "pretty": false,
+    "x": 360,
+    "y": 120,
+    "wires": [
+      [
+        "extract_meta"
+      ]
+    ]
+  },
+  {
+    "id": "extract_meta",
+    "type": "function",
+    "z": "rivercast_flow",
+    "name": "Build Series (p10/p50/p90)",
+    "func": "// payload example:\n// {p10,p50,p90, station_id, horizon_minutes, target, ts}\nconst p = msg.payload || {};\nconst st = p.station_id || \"?\";\nconst hz = p.horizon_minutes || 0;\nconst target = p.target || \"?\";\nconst ts = p.ts || Date.now();\n\n// Create three series messages for ui_chart\nconst baseTopic = `${st}/${hz}min/${target}`;\n\nconst m10 = { ...msg, topic: baseTopic+\"/p10\", payload: { series: baseTopic+\"/p10\", data: [{ x: new Date(ts), y: p.p10 }] } };\nconst m50 = { ...msg, topic: baseTopic+\"/p50\", payload: { series: baseTopic+\"/p50\", data: [{ x: new Date(ts), y: p.p50 }] } };\nconst m90 = { ...msg, topic: baseTopic+\"/p90\", payload: { series: baseTopic+\"/p90\", data: [{ x: new Date(ts), y: p.p90 }] } };\n\n// For gauge we just forward p50 numeric\nconst g = { ...msg, topic: baseTopic, payload: p.p50 };\n\nreturn [ [m10, m50, m90], [g] ];",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 620,
+    "y": 120,
+    "wires": [
+      [
+        "chart"
+      ],
+      [
+        "gauge"
+      ]
+    ]
+  },
+  {
+    "id": "chart",
+    "type": "ui_chart",
+    "z": "rivercast_flow",
+    "name": "Forecast p10/p50/p90",
+    "group": "rivercast_group",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "label": "Forecasts ({{topic}})",
+    "chartType": "line",
+    "legend": "true",
+    "xformat": "HH:mm",
+    "interpolate": "linear",
+    "nodata": "",
+    "dot": false,
+    "ymin": "",
+    "ymax": "",
+    "removeOlder": "24",
+    "removeOlderPoints": "",
+    "removeOlderUnit": "3600",
+    "cutout": 0,
+    "useOneColor": false,
+    "useUTC": true,
+    "colors": [],
+    "outputs": 1,
+    "useDifferentColor": true,
+    "className": "",
+    "x": 900,
+    "y": 100,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "gauge",
+    "type": "ui_gauge",
+    "z": "rivercast_flow",
+    "name": "Latest p50",
+    "group": "rivercast_group",
+    "order": 2,
+    "width": 0,
+    "height": 0,
+    "gtype": "gage",
+    "title": "Latest p50",
+    "label": "{{topic}}",
+    "format": "{{value}}",
+    "min": "",
+    "max": "",
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "",
+    "seg2": "",
+    "className": "",
+    "x": 900,
+    "y": 150,
+    "wires": []
+  }
+]
