@@ -7,3 +7,4 @@ statsmodels
 paho-mqtt
 pyyaml
 joblib
+matplotlib
