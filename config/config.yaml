@@ -1,0 +1,24 @@
+raster: "15T"
+
+# Zielspalte für Vorhersage: 'q_cms' (Durchfluss) ODER 'h_cm' (Wasserstand)
+target_col: "h_cm"
+
+# Mehrere Horizonte (in 15-Minuten-Schritten): 6h=24, 12h=48, 24h=96
+horizon_steps_list: [24, 48, 96]
+
+stations: ["ERFT_A","ERFT_B"]
+
+# Exogene Features: aktivieren und Pfade angeben
+features_exogenous:
+  dwd_icon:
+    enabled: true
+    path: "data/raw/icon_forecast.csv"  # Schema: ts,station_id,icon_rr_mm,icon_t2m_c
+  soil_moisture:
+    enabled: true
+    path: "data/raw/soil_moisture.csv"  # Schema: ts,station_id,sm_pct
+
+mqtt:
+  enabled: false
+  host: "localhost"
+  port: 1883
+  base_topic: "/rivercast"

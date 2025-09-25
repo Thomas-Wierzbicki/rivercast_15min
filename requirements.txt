@@ -1,0 +1,9 @@
+pandas
+numpy
+pyarrow
+scikit-learn
+lightgbm
+statsmodels
+paho-mqtt
+pyyaml
+joblib

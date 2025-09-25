@@ -1,0 +1,170 @@
+[
+  {
+    "id": "rivercast_flow",
+    "label": "Rivercast Dashboard",
+    "nodes": [
+      {
+        "id": "mqtt_in",
+        "type": "mqtt in",
+        "z": "flow1",
+        "name": "Rivercast Forecasts",
+        "topic": "/rivercast/+/forecast/+/+",
+        "qos": "1",
+        "datatype": "auto",
+        "broker": "broker1",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "x": 140,
+        "y": 120,
+        "wires": [
+          [
+            "parser"
+          ]
+        ]
+      },
+      {
+        "id": "parser",
+        "type": "json",
+        "z": "flow1",
+        "name": "to JSON",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 350,
+        "y": 120,
+        "wires": [
+          [
+            "sel"
+          ]
+        ]
+      },
+      {
+        "id": "sel",
+        "type": "function",
+        "z": "flow1",
+        "name": "Select p50",
+        "func": "// expects payload with p50, station_id, horizon_minutes, target\nvar p50 = msg.payload.p50;\nvar st = msg.payload.station_id;\nvar hz = msg.payload.horizon_minutes;\nmsg.topic = st+\"/\"+hz;\nmsg.payload = p50;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 120,
+        "wires": [
+          [
+            "chart",
+            "gauge"
+          ]
+        ]
+      },
+      {
+        "id": "chart",
+        "type": "ui_chart",
+        "z": "flow1",
+        "name": "Forecast p50",
+        "group": "ui_group",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "p50 {{topic}}",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": "6",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": "",
+        "useOneColor": false,
+        "useUTC": true,
+        "colors": [],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 760,
+        "y": 100,
+        "wires": [
+          []
+        ]
+      },
+      {
+        "id": "gauge",
+        "type": "ui_gauge",
+        "z": "flow1",
+        "name": "",
+        "group": "ui_group",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "Latest p50",
+        "label": "",
+        "format": "{{value}}",
+        "min": "",
+        "max": "",
+        "colors": [
+          "#00b500",
+          "#e6e600",
+          "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "className": "",
+        "x": 760,
+        "y": 150,
+        "wires": []
+      },
+      {
+        "id": "ui_tab",
+        "type": "ui_tab",
+        "z": "flow1",
+        "name": "Rivercast",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+      },
+      {
+        "id": "ui_group",
+        "type": "ui_group",
+        "z": "flow1",
+        "name": "Forecasts",
+        "tab": "ui_tab",
+        "order": 1,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+      },
+      {
+        "id": "broker1",
+        "type": "mqtt-broker",
+        "name": "Local MQTT",
+        "broker": "localhost",
+        "port": "1883",
+        "clientid": "",
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {}
+      }
+    ],
+    "configs": []
+  }
+]
